@@ -1,0 +1,242 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, touch-action=none">
+    <title>Happy Birthday!</title>
+    <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=Zhi+Mang+Xing&display=swap" rel="stylesheet">
+    <style>
+       /* 1. 引入本地中文像素字体 Zpix */
+        @font-face {
+            font-family: 'Zpix';
+            src: url('./zpix.ttf') format('truetype'); /* 这里改成了本地路径 */
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        
+        body {
+            background-color: #1a1a1a;
+            color: #ffffff;
+            font-family: 'Press Start 2P', 'Zpix', monospace; /* 全局优先英文像素字，其次中文像素字 */
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+            overflow: hidden;
+            user-select: none;
+        }
+        
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        
+        body {
+            background-color: #1a1a1a;
+            color: #ffffff;
+            font-family: 'Press Start 2P', monospace;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+            overflow: hidden;
+            user-select: none;
+        }
+
+        /* 升级后的主标题区域 */
+        .title {
+            font-size: 3rem; 
+            text-align: center;
+            margin-bottom: 60px;
+            line-height: 1.8;
+            text-shadow: 4px 4px 0px #000, 6px 6px 0px rgba(0, 0, 0, 0.5); 
+            animation: blinker 1.2s step-start infinite;
+        }
+
+        /* 2. 单独控制中文副标题 */
+        .subtitle {
+            font-family: 'Zpix', monospace; /* 强制使用中文像素字体 */
+            font-size: 1.8rem; /* 像素字体通常视觉偏小，这里我把字号稍微调大到了 1.8rem */
+            color: #e0e0e0; 
+            display: block; 
+            margin-top: 15px;
+            text-shadow: 3px 3px 0px #000; /* 加深中文的阴影，增加像素立体感 */
+        }
+
+        /* 闪烁动画关键帧 */
+        @keyframes blinker {
+            50% { opacity: 0.3; } 
+        }
+
+        /* 锁头区域 */
+        .lock-container {
+            font-size: 80px;
+            margin-bottom: 80px;
+            position: relative;
+            /* 增加一个轻微的呼吸灯效果，提示这里是目标 */
+            animation: pulse 2s infinite; 
+        }
+
+        /* 呼吸动画 */
+        @keyframes pulse {
+            0% { transform: scale(1); filter: drop-shadow(0 0 5px rgba(255,255,255,0.2)); }
+            50% { transform: scale(1.05); filter: drop-shadow(0 0 15px rgba(255,255,255,0.6)); }
+            100% { transform: scale(1); filter: drop-shadow(0 0 5px rgba(255,255,255,0.2)); }
+        }
+
+        /* 钥匙元素 */
+        .key {
+            font-size: 60px;
+            cursor: grab;
+            position: absolute;
+            bottom: 10%;
+            touch-action: none;
+            transition: transform 0.1s;
+        }
+        
+        .key:active {
+            cursor: grabbing;
+        }
+
+        .progress-bar {
+            width: 0%;
+            height: 5px;
+            background-color: #00ffcc;
+            position: absolute;
+            bottom: 5%;
+            border-radius: 5px;
+            transition: width 0.1s linear;
+        }
+
+        /* 开锁震动动画 */
+        @keyframes shake {
+            0% { transform: translateX(0); }
+            25% { transform: translateX(-10px) rotate(-5deg); }
+            50% { transform: translateX(10px) rotate(5deg); }
+            75% { transform: translateX(-10px) rotate(-5deg); }
+            100% { transform: translateX(0); }
+        }
+
+        .shake-animation {
+            /* 开锁后取消呼吸动画，换成震动动画 */
+            animation: shake 0.4s ease-in-out !important; 
+        }
+    </style>
+</head>
+<body>
+
+    <div class="title">
+        PRESS START...<br>
+        <span class="subtitle">你准备好了吗？</span>
+    </div>
+
+    <div class="lock-container" id="lock">🔒</div>
+    
+    <div class="key" id="key">🗝️</div>
+    
+    <div class="progress-bar" id="progressBar"></div>
+
+    <audio id="unlockSound" src="./unlock.mp3"></audio>
+
+    <script>
+        const key = document.getElementById('key');
+        const lock = document.getElementById('lock');
+        const progressBar = document.getElementById('progressBar');
+        const unlockSound = document.getElementById('unlockSound');
+        
+        let isDragging = false;
+        let pressTimer = null;
+        let progressInterval = null;
+        let pressDuration = 0;
+        const requiredPressTime = 3000; 
+
+        // 核心解锁逻辑
+        function unlockSuccess() {
+            // 播放开锁音效！
+            unlockSound.play();
+            
+            lock.classList.add('shake-animation');
+            // 解锁成功后，将闭合的锁头改为打开的锁头 🔓
+            lock.innerText = '🔓'; 
+            key.style.display = 'none'; 
+            progressBar.style.display = 'none';
+
+            setTimeout(() => {
+                // 跳转到第二关的 HTML 文件
+                window.location.href = "./level2.html";
+            }, 1000);
+        }
+
+        function checkCollision() {
+            const keyRect = key.getBoundingClientRect();
+            const lockRect = lock.getBoundingClientRect();
+
+            // 缩小一点触发范围，让钥匙必须更靠近锁头中心才会触发
+            const tolerance = 20; 
+
+            if (
+                keyRect.left + tolerance < lockRect.right &&
+                keyRect.right - tolerance > lockRect.left &&
+                keyRect.top + tolerance < lockRect.bottom &&
+                keyRect.bottom - tolerance > lockRect.top
+            ) {
+                return true;
+            }
+            return false;
+        }
+
+        key.addEventListener('pointerdown', (e) => {
+            isDragging = true;
+            key.setPointerCapture(e.pointerId); 
+            key.dataset.startX = e.clientX;
+            key.dataset.startY = e.clientY;
+            key.style.transform = `translate(0px, 0px)`;
+
+            pressDuration = 0;
+            progressInterval = setInterval(() => {
+                pressDuration += 100;
+                let percent = (pressDuration / requiredPressTime) * 100;
+                progressBar.style.width = percent + '%';
+                
+                if (pressDuration >= requiredPressTime) {
+                    clearInterval(progressInterval);
+                    unlockSuccess();
+                    isDragging = false;
+                }
+            }, 100);
+        });
+
+        key.addEventListener('pointermove', (e) => {
+            if (!isDragging) return;
+
+            const deltaX = e.clientX - key.dataset.startX;
+            const deltaY = e.clientY - key.dataset.startY;
+            
+            if (Math.abs(deltaX) > 10 || Math.abs(deltaY) > 10) {
+                clearInterval(progressInterval);
+                progressBar.style.width = '0%';
+            }
+
+            key.style.transform = `translate(${deltaX}px, ${deltaY}px)`;
+
+            if (checkCollision()) {
+                isDragging = false;
+                clearInterval(progressInterval);
+                unlockSuccess();
+            }
+        });
+
+        key.addEventListener('pointerup', (e) => {
+            isDragging = false;
+            clearInterval(progressInterval);
+            progressBar.style.width = '0%';
+            
+            // 如果没解锁成功（锁头依然是闭合的）
+            if(lock.innerText === '🔒'){
+                key.style.transform = `translate(0px, 0px)`;
+                key.style.transition = 'transform 0.3s ease'; 
+                setTimeout(() => { key.style.transition = 'none'; }, 300);
+            }
+        });
+    </script>
+</body>
+</html>

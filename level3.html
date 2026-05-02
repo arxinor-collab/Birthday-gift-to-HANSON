@@ -1,0 +1,209 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, touch-action=none">
+    <title>收到一条新讯息</title>
+    <style>
+        /* 引入本地中文像素字体 Zpix */
+        @font-face {
+            font-family: 'Zpix';
+            src: url('./zpix.ttf') format('truetype');
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        
+        body {
+            /* 引入你下载的可爱背景图 */
+            background-image: url('./cute-bg.png'); 
+            background-size: cover; /* 魔法属性：让图片完美等比铺满整个屏幕 */
+            background-position: center; /* 保证图片的视觉中心点在屏幕中间 */
+            background-repeat: no-repeat; /* 防止图片像瓷砖一样重复拼接 */
+            
+            color: #ffffff;
+            font-family: 'Zpix', 'Press Start 2P', monospace;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+            overflow: hidden;
+            user-select: none;
+        }
+
+        /* 经典的复古游戏对话框样式 */
+        .dialog-box {
+            width: 90%;
+            max-width: 700px;
+            height: 250px;
+            background-color: rgba(0, 0, 0, 0.85); /* 半透明黑色底 */
+            border: 4px solid #ffffff; /* 边框调细，视觉上更柔和 */
+            border-radius: 30px; /* 大圆角，大幅减少尖锐直角 */
+            padding: 40px;
+            position: relative;
+            /* 增加一点像素阴影，让对话框浮起来 */
+            box-shadow: 10px 10px 0px rgba(0, 255, 204, 0.3); 
+            cursor: pointer; /* 提示这里可以点击 */
+        }
+
+        .dialog-text {
+            font-size: 2rem;
+            line-height: 2;
+            letter-spacing: 2px; /* 增加字间距，更有复古感 */
+        }
+
+        /* 正在打字时的光标（闪烁的小方块） */
+        .blinking-cursor {
+            display: inline-block;
+            width: 15px;
+            height: 30px;
+            background-color: #ffffff;
+            vertical-align: bottom;
+            animation: blink 0.8s step-end infinite;
+            margin-left: 5px;
+        }
+
+        /* 句子打完后，右下角提示“点击继续”的跳动小箭头 */
+        .next-indicator {
+            position: absolute;
+            bottom: 25px;
+            right: 35px;
+            font-size: 2rem;
+            color: #00ffcc; /* 使用和前面呼应的青色 */
+            display: none; /* 默认隐藏，打完字才显示 */
+            animation: bounce 1s infinite;
+        }
+
+        @keyframes blink { 50% { opacity: 0; } }
+        
+        @keyframes bounce {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(8px); }
+        }
+        
+        /* 顶部可以加一个小标签提示谁在说话 */
+        .name-tag {
+            position: absolute;
+            top: -22px;
+            left: 30px;
+            /* 背景换成和对话框一样的深色实色（绝不透明） */
+            background-color: #1a1a1a; 
+            /* 文字变成纯白 */
+            color: #ffffff; 
+            padding: 5px 20px;
+            font-size: 1.2rem;
+            border: 4px solid #ffffff; 
+            border-radius: 20px; 
+            z-index: 10; 
+        }
+    </style>
+</head>
+<body>
+
+    <div class="dialog-box" id="dialogBox">
+        <div class="name-tag">来自: 你超级可爱的女朋友</div> 
+        
+        <div class="dialog-text">
+            <span id="textContent"></span><span class="blinking-cursor" id="cursor"></span>
+        </div>
+        
+        <div class="next-indicator" id="nextIndicator">▼</div>
+    </div>
+
+    <audio id="typeSound" src="./beep.mp3"></audio>
+
+    <script>
+        // ==========================================
+        // 核心逻辑：这里写你想对他说的话！
+        // 每一行用英文逗号隔开，每一行需要点击一次才会进入下一行。
+        // ==========================================
+        const messages = [
+            "Hi！亲爱的男朋友~",
+            "感谢你点开这个网页~",
+            "让你久等啦，迟来的生日礼物~",
+            "先赔你一个电子蛋糕😼。",
+            "祝你26岁生日快乐！！！🎂✨"
+        ];
+
+        const textContent = document.getElementById('textContent');
+        const cursor = document.getElementById('cursor');
+        const nextIndicator = document.getElementById('nextIndicator');
+        const dialogBox = document.getElementById('dialogBox');
+        const typeSound = document.getElementById('typeSound');
+
+        let messageIndex = 0;
+        let charIndex = 0;
+        let isTyping = false;
+        let typingTimer;
+
+        const typeSpeed = 120; // 打字速度：数值越大打字越慢（单位：毫秒）
+
+        // 打字机特效函数
+        function typeWriter() {
+            if (charIndex < messages[messageIndex].length) {
+                isTyping = true;
+                cursor.style.display = 'inline-block';
+                nextIndicator.style.display = 'none';
+
+                // 一个字一个字地添加
+                textContent.innerHTML += messages[messageIndex].charAt(charIndex);
+                charIndex++;
+
+                // 每次敲击播放声音
+                if(typeSound) { typeSound.currentTime = 0; typeSound.play(); }
+
+                typingTimer = setTimeout(typeWriter, typeSpeed);
+            } else {
+                // 当前句子打完了！
+                isTyping = false;
+                cursor.style.display = 'none'; 
+                nextIndicator.style.display = 'block'; 
+                
+                // 【新增核心逻辑】：文字打完，立刻掐断声音！
+                if(typeSound) { 
+                    typeSound.pause(); 
+                    typeSound.currentTime = 0; 
+                }
+            }
+        }
+
+        // 开始打印一句话
+        function startMessage() {
+            textContent.innerHTML = ''; // 清空上一句
+            charIndex = 0; // 字符索引归零
+            typeWriter();
+        }
+
+        // 监听屏幕点击事件
+        dialogBox.addEventListener('pointerdown', () => {
+            if (isTyping) {
+                // 1. 正在打字中... 此时点击，直接显示完整句子
+                clearTimeout(typingTimer);
+                textContent.innerHTML = messages[messageIndex];
+                charIndex = messages[messageIndex].length;
+                isTyping = false;
+                cursor.style.display = 'none';
+                nextIndicator.style.display = 'block';
+                
+                // 【新增核心逻辑】：点击跳过时，也要立刻掐断声音！
+                if(typeSound) { 
+                    typeSound.pause(); 
+                    typeSound.currentTime = 0; 
+                }
+            } else {
+                // 2. 当前句子已经打完... 此时点击，进入下一句话
+                messageIndex++;
+                if (messageIndex < messages.length) {
+                    startMessage();
+                } else {
+                    // 3. 所有对话结束！
+                    window.location.href = "./level4.html";
+                }
+            }
+        });
+
+        // 页面加载后，延迟0.5秒开始打字，增加沉浸感
+        setTimeout(startMessage, 500);
+    </script>
+</body>
+</html>
